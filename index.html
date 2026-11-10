@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Manajemen Keuangan & Orderan IGR</title>
+    
+    <!-- Meta untuk PWA -->
+    <meta name="theme-color" content="#16a34a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link id="manifest-link" rel="manifest" href="">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- html2pdf.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        igr: {
+                            green: '#16a34a',
+                            dark: '#111827',
+                            light: '#f9fafb'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #111827; }
+        .view-section { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #16a34a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #15803d; }
+        
+        .nav-item.active { background-color: #16a34a; color: white; }
+        .nav-item { transition: all 0.2s ease-in-out; }
+        .nav-item:hover:not(.active) { background-color: #374151; color: white; }
+    </style>
+</head>
+<body class="bg-gray-50 text-sm sm:text-base">
+
+    <!-- Auth Section (Login) -->
+    <div id="auth-section" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center">
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                <i class="fa-solid fa-wallet text-4xl text-igr-green"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800">IGR Manager</h1>
+            <p class="text-gray-500 mt-2">Manajemen Keuangan & Orderan Terpadu</p>
+        </div>
+        
+        <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 max-w-sm w-full text-center">
+            <h2 class="text-lg font-semibold text-gray-800 mb-6">Masuk ke Akun Anda</h2>
+            <button onclick="loginWithGoogle()" class="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 rounded-lg px-6 py-3 shadow-sm hover:bg-gray-50 transition-colors font-medium text-gray-700">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-6 h-6">
+                Lanjutkan dengan Google
+            </button>
+            <p id="auth-error" class="text-red-500 text-sm mt-4 hidden"></p>
+            <div class="mt-6 flex items-center justify-center gap-2 text-xs text-gray-400">
+                <i class="fa-solid fa-shield-halved"></i> Aman & Tersinkronisasi Cloud
+            </div>
+        </div>
+    </div>
+
+    <!-- App Section (Main Dashboard) -->
+    <div id="app-section" class="flex h-screen overflow-hidden w-full hidden">
+        <!-- Mobile Overlay -->
+        <div id="mobile-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="bg-igr-dark text-gray-300 w-64 flex-shrink-0 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out z-30 flex flex-col shadow-xl">
+            <div class="p-6 flex items-center justify-between border-b border-gray-700">
+                <h1 class="text-white text-xl font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-igr-green"></i> IGR Manager
+                </h1>
+                <button class="md:hidden text-gray-400 hover:text-white" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+                <a href="#" onclick="navigate('dashboard', event)" id="nav-dashboard" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg active text-white">
+                    <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
+                </a>
+                <a href="#" onclick="navigate('orders', event)" id="nav-orders" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg">
+                    <i class="fa-solid fa-cart-shopping w-5"></i> Orderan
+                </a>
+                <a href="#" onclick="navigate('finance', event)" id="nav-finance" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg">
+                    <i class="fa-solid fa-money-bill-transfer w-5"></i> Keuangan
+                </a>
+                <a href="#" onclick="navigate('reports', event)" id="nav-reports" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg">
+                    <i class="fa-solid fa-file-invoice w-5"></i> Laporan
+                </a>
+                <a href="#" onclick="navigate('settings', event)" id="nav-settings" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg">
+                    <i class="fa-solid fa-gear w-5"></i> Pengaturan
+                </a>
+            </nav>
+            <div class="p-4 border-t border-gray-700 text-xs text-center text-gray-500">
+                &copy; 2026 IGR Manager<br>V 2.0.0 (Cloud)
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col h-screen overflow-hidden w-full">
+            <!-- Header -->
+            <header class="bg-white shadow-sm z-10 p-4 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <button class="md:hidden text-gray-600 hover:text-igr-green focus:outline-none" onclick="toggleSidebar()">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                    <h2 id="page-title" class="text-xl font-bold text-gray-800">Dashboard</h2>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="text-right hidden sm:block">
+                        <p class="text-sm font-semibold text-gray-800" id="header-profile-name">Memuat...</p>
+                        <p class="text-xs text-gray-500 truncate w-32" id="header-profile-email">email@anda.com</p>
+                    </div>
+                    <img id="header-profile-img" src="https://placehold.co/100x100/16a34a/ffffff?text=U" class="w-10 h-10 rounded-full shadow-md object-cover border border-gray-200">
+                    <button onclick="logoutUser()" class="ml-2 bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600 p-2 rounded-full transition-colors" title="Keluar">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Scrollable Content Area -->
+            <div class="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50 relative pb-20">
+                
+                <!-- VIEW: DASHBOARD -->
+                <section id="view-dashboard" class="view-section active space-y-6">
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500">
+                            <p class="text-sm text-gray-500 font-medium">Total Saldo Saat Ini</p>
+                            <h3 class="text-2xl font-bold text-gray-800 mt-1" id="dash-saldo">Rp 0</h3>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-igr-green">
+                            <p class="text-sm text-gray-500 font-medium">Total Pemasukan</p>
+                            <h3 class="text-2xl font-bold text-gray-800 mt-1" id="dash-income">Rp 0</h3>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-red-500">
+                            <p class="text-sm text-gray-500 font-medium">Total Pengeluaran</p>
+                            <h3 class="text-2xl font-bold text-gray-800 mt-1" id="dash-expense">Rp 0</h3>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-yellow-500">
+                            <p class="text-sm text-gray-500 font-medium">Laba Bersih</p>
+                            <h3 class="text-2xl font-bold text-gray-800 mt-1" id="dash-profit">Rp 0</h3>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Chart Area -->
+                        <div class="bg-white p-5 rounded-xl shadow-sm lg:col-span-2">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">Grafik Keuangan (7 Hari Terakhir)</h3>
+                            <div class="relative h-64 w-full">
+                                <canvas id="dashboardChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Order Stats & Recent -->
+                        <div class="space-y-6">
+                            <div class="bg-white p-5 rounded-xl shadow-sm">
+                                <h3 class="text-lg font-bold text-gray-800 mb-4">Status Orderan</h3>
+                                <div class="flex justify-between items-center mb-3">
+                                    <span class="text-gray-600">Aktif (Menunggu/Proses)</span>
+                                    <span class="font-bold text-orange-500 bg-orange-100 px-2 py-1 rounded" id="dash-order-active">0</span>
+                                </div>
+                                <div class="flex justify-between items-center mb-3">
+                                    <span class="text-gray-600">Selesai</span>
+                                    <span class="font-bold text-igr-green bg-green-100 px-2 py-1 rounded" id="dash-order-done">0</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Dibatalkan</span>
+                                    <span class="font-bold text-red-500 bg-red-100 px-2 py-1 rounded" id="dash-order-cancelled">0</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-5 rounded-xl shadow-sm">
+                                <h3 class="text-lg font-bold text-gray-800 mb-3">Aktivitas Terbaru</h3>
+                                <ul class="space-y-3" id="dash-recent-activities">
+                                    <!-- Injected by JS -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: ORDERS -->
+                <section id="view-orders" class="view-section space-y-6">
+                    <div class="bg-white p-5 rounded-xl shadow-sm">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                            <h3 class="text-lg font-bold text-gray-800">Manajemen Orderan</h3>
+                            <button onclick="openOrderModal()" class="bg-igr-green hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2">
+                                <i class="fa-solid fa-plus"></i> Tambah Order
+                            </button>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                            <input type="text" id="order-search" placeholder="Cari nama pembeli..." class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-igr-green focus:ring-1 focus:ring-igr-green" onkeyup="renderOrders()">
+                            <select id="order-filter-status" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-igr-green" onchange="renderOrders()">
+                                <option value="ALL">Semua Status</option>
+                                <option value="MENUNGGU">Menunggu</option>
+                                <option value="PROSES">Proses</option>
+                                <option value="SELESAI">Selesai</option>
+                                <option value="DIBATALKAN">Dibatalkan</option>
+                            </select>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
+                                        <th class="p-3 font-semibold">Tanggal</th>
+                                        <th class="p-3 font-semibold">Pembeli</th>
+                                        <th class="p-3 font-semibold">Item</th>
+                                        <th class="p-3 font-semibold text-right">Omzet</th>
+                                        <th class="p-3 font-semibold text-right">Laba</th>
+                                        <th class="p-3 font-semibold text-center">Status</th>
+                                        <th class="p-3 font-semibold text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="orders-table-body" class="divide-y divide-gray-100 text-sm">
+                                    <!-- Injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: FINANCE -->
+                <section id="view-finance" class="view-section space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Form Tambah Transaksi -->
+                        <div class="bg-white p-5 rounded-xl shadow-sm h-fit">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">Catat Transaksi</h3>
+                            <form id="finance-form" onsubmit="handleFinanceSubmit(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">Jenis Transaksi</label>
+                                    <div class="flex gap-4">
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="radio" name="finType" value="income" checked class="text-igr-green focus:ring-igr-green" onchange="updateCategoryOptions()">
+                                            <span class="text-sm font-medium">Pemasukan</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="radio" name="finType" value="expense" class="text-red-500 focus:ring-red-500" onchange="updateCategoryOptions()">
+                                            <span class="text-sm font-medium">Pengeluaran</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">Kategori</label>
+                                    <select id="fin-category" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-igr-green"></select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">Nominal (Rp)</label>
+                                    <input type="number" id="fin-amount" required min="0" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-igr-green">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">Tanggal</label>
+                                    <input type="date" id="fin-date" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-igr-green">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">Keterangan</label>
+                                    <textarea id="fin-note" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-igr-green"></textarea>
+                                </div>
+                                <button type="submit" class="w-full bg-igr-green hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm">
+                                    Simpan Transaksi
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Riwayat Transaksi -->
+                        <div class="bg-white p-5 rounded-xl shadow-sm lg:col-span-2">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-bold text-gray-800">Riwayat Transaksi</h3>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
+                                            <th class="p-3 font-semibold">Tanggal</th>
+                                            <th class="p-3 font-semibold">Keterangan & Kategori</th>
+                                            <th class="p-3 font-semibold text-right">Pemasukan</th>
+                                            <th class="p-3 font-semibold text-right">Pengeluaran</th>
+                                            <th class="p-3 font-semibold text-center">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="finance-table-body" class="divide-y divide-gray-100 text-sm">
+                                        <!-- Injected by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: REPORTS -->
+                <section id="view-reports" class="view-section space-y-6">
+                    <div class="bg-white p-5 rounded-xl shadow-sm">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                            <h3 class="text-lg font-bold text-gray-800">Laporan Keuangan</h3>
+                            <div class="flex gap-2 w-full sm:w-auto">
+                                <input type="date" id="report-start" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none text-sm">
+                                <span class="py-2 text-gray-500">-</span>
+                                <input type="date" id="report-end" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none text-sm">
+                                <button onclick="generateReport()" class="bg-gray-800 hover:bg-black text-white px-4 py-2 rounded-lg font-medium shadow-sm text-sm">
+                                    Filter
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="report-content" class="p-4 border border-gray-200 rounded-lg bg-white">
+                            <div class="text-center mb-6 border-b pb-4">
+                                <h2 class="text-2xl font-bold text-gray-800 uppercase">Laporan Keuangan IGR</h2>
+                                <p class="text-gray-500" id="report-period-text">Periode: Semua Waktu</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                                <div class="bg-green-50 p-4 rounded-lg border border-green-100 text-center">
+                                    <p class="text-sm text-green-700 font-semibold">Total Pemasukan</p>
+                                    <h4 class="text-xl font-bold text-green-800 mt-1" id="rep-income">Rp 0</h4>
+                                </div>
+                                <div class="bg-red-50 p-4 rounded-lg border border-red-100 text-center">
+                                    <p class="text-sm text-red-700 font-semibold">Total Pengeluaran</p>
+                                    <h4 class="text-xl font-bold text-red-800 mt-1" id="rep-expense">Rp 0</h4>
+                                </div>
+                                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 text-center">
+                                    <p class="text-sm text-blue-700 font-semibold">Keuntungan Bersih</p>
+                                    <h4 class="text-xl font-bold text-blue-800 mt-1" id="rep-profit">Rp 0</h4>
+                                </div>
+                            </div>
+
+                            <div class="relative h-64 w-full mb-6">
+                                <canvas id="reportChart"></canvas>
+                            </div>
+                            
+                            <div class="text-sm text-gray-500 text-center border-t pt-4">
+                                Laporan ini dibuat otomatis oleh Sistem Manajemen IGR tersinkronisasi Cloud.
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex justify-end">
+                            <button onclick="exportToPDF()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2">
+                                <i class="fa-solid fa-file-pdf"></i> Ekspor PDF
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: SETTINGS -->
+                <section id="view-settings" class="view-section space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        
+                        <!-- Profil Aplikasi -->
+                        <div class="bg-white p-5 rounded-xl shadow-sm">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Profil Pengelola</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">Nama Toko/Admin</label>
+                                    <input type="text" id="set-profile-name" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:border-igr-green outline-none">
+                                </div>
+                                <button onclick="saveProfile()" class="bg-igr-green hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm">Simpan Profil</button>
+                            </div>
+                        </div>
+
+                        <!-- Backup & Restore -->
+                        <div class="bg-white p-5 rounded-xl shadow-sm">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Status Cloud & Pencadangan</h3>
+                            <p class="text-sm text-green-600 font-medium mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-cloud-check"></i> Data Anda tersimpan aman dan tersinkronisasi.
+                            </p>
+                            <p class="text-xs text-gray-500 mb-4">Anda tetap dapat mengekspor data dalam bentuk file JSON sebagai arsip pribadi jika diperlukan.</p>
+                            <div class="flex gap-4">
+                                <button onclick="exportData()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm flex justify-center items-center gap-2">
+                                    <i class="fa-solid fa-download"></i> Unduh Cadangan JSON
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Pengaturan Harga IGR -->
+                        <div class="bg-white p-5 rounded-xl shadow-sm">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Katalog Item / Saldo IGR</h3>
+                            <form onsubmit="addIgrCatalog(event)" class="flex flex-col gap-2 mb-4">
+                                <input type="text" id="cat-nama" placeholder="Nama Item (Misal: 100 IGR)" required class="border px-3 py-2 rounded text-sm outline-none focus:border-igr-green">
+                                <div class="flex gap-2">
+                                    <input type="number" id="cat-modal" placeholder="Modal (Rp)" required class="w-1/2 border px-3 py-2 rounded text-sm outline-none focus:border-igr-green">
+                                    <input type="number" id="cat-jual" placeholder="Harga Jual (Rp)" required class="w-1/2 border px-3 py-2 rounded text-sm outline-none focus:border-igr-green">
+                                </div>
+                                <button type="submit" class="bg-gray-800 text-white py-2 rounded text-sm hover:bg-black">Tambah Item</button>
+                            </form>
+                            <ul id="list-katalog-igr" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                <!-- Injected JS -->
+                            </ul>
+                        </div>
+
+                        <!-- Kategori Transaksi -->
+                        <div class="bg-white p-5 rounded-xl shadow-sm">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Kategori Keuangan</h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <h4 class="text-sm font-semibold mb-2 text-green-600">Pemasukan</h4>
+                                    <form onsubmit="addCategory(event, 'income')" class="flex gap-1 mb-2">
+                                        <input type="text" id="cat-inc-name" placeholder="Kategori baru" required class="w-full border px-2 py-1 rounded text-xs outline-none focus:border-igr-green">
+                                        <button type="submit" class="bg-green-600 text-white px-2 rounded text-xs">+</button>
+                                    </form>
+                                    <ul id="list-cat-inc" class="text-sm space-y-1 text-gray-600 h-32 overflow-y-auto"></ul>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-semibold mb-2 text-red-600">Pengeluaran</h4>
+                                    <form onsubmit="addCategory(event, 'expense')" class="flex gap-1 mb-2">
+                                        <input type="text" id="cat-exp-name" placeholder="Kategori baru" required class="w-full border px-2 py-1 rounded text-xs outline-none focus:border-red-500">
+                                        <button type="submit" class="bg-red-500 text-white px-2 rounded text-xs">+</button>
+                                    </form>
+                                    <ul id="list-cat-exp" class="text-sm space-y-1 text-gray-600 h-32 overflow-y-auto"></ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Order -->
+    <div id="modal-order" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md transform scale-95 transition-transform duration-300" id="modal-order-content">
+            <div class="flex justify-between items-center p-5 border-b border-gray-100">
+                <h3 class="text-lg font-bold text-gray-800" id="modal-order-title">Tambah Orderan</h3>
+                <button onclick="closeOrderModal()" class="text-gray-400 hover:text-red-500 focus:outline-none">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+            <form id="form-order" onsubmit="saveOrder(event)" class="p-5 space-y-4">
+                <input type="hidden" id="ord-id">
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Nama Pembeli</label>
+                    <input type="text" id="ord-buyer" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-igr-green">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Pilih Item (Otomatis Isi Harga)</label>
+                    <select id="ord-katalog" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-igr-green" onchange="autoFillOrder()">
+                        <option value="">-- Pilih dari Katalog atau Isi Manual --</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Harga Jual (Rp)</label>
+                        <input type="number" id="ord-price" required min="0" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-igr-green" oninput="calcProfit()">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Modal (Rp)</label>
+                        <input type="number" id="ord-capital" required min="0" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-igr-green" oninput="calcProfit()">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Keuntungan Bersih (Rp)</label>
+                    <input type="text" id="ord-profit" readonly class="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-2 font-bold text-igr-green">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Status</label>
+                    <select id="ord-status" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-igr-green">
+                        <option value="MENUNGGU">Menunggu Pembayaran</option>
+                        <option value="PROSES">Sedang Diproses</option>
+                        <option value="SELESAI">Selesai</option>
+                        <option value="DIBATALKAN">Dibatalkan</option>
+                    </select>
+                    <p class="text-xs text-orange-500 mt-1 hidden" id="ord-status-warning">*Jika diset SELESAI, akan otomatis dicatat ke keuangan.</p>
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-igr-green hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold shadow-md">Simpan Order</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="modal-confirm" class="fixed inset-0 bg-black bg-opacity-60 z-[110] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+            <i class="fa-solid fa-circle-exclamation text-4xl text-yellow-500 mb-4"></i>
+            <h3 class="text-lg font-bold text-gray-800 mb-2" id="confirm-title">Konfirmasi</h3>
+            <p class="text-gray-600 text-sm mb-6" id="confirm-msg">Apakah Anda yakin?</p>
+            <div class="flex gap-3">
+                <button onclick="closeConfirm(false)" class="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 font-medium">Batal</button>
+                <button onclick="closeConfirm(true)" class="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 font-medium" id="confirm-btn">Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Toast Notification -->
+    <div id="toast-container" class="fixed top-5 right-5 z-[120] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- FIREBASE PENGATURAN -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, deleteDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Konfigurasi Environment & Firebase
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'igr-manager-default';
+        let firebaseConfig;
+        
+        try {
+            firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        } catch (e) {
+            console.error("Firebase config parsing error", e);
+        }
+
+        if (!firebaseConfig) {
+            document.getElementById('auth-error').innerText = "Konfigurasi Firebase tidak ditemukan. Hubungi administrator.";
+            document.getElementById('auth-error').classList.remove('hidden');
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Mengaktifkan penyimpanan Offline (IndexedDB)
+        enableIndexedDbPersistence(db).catch((err) => {
+            console.warn("Mode offline persisten tidak dapat diaktifkan: ", err.code);
+        });
+
+        const provider = new GoogleAuthProvider();
+
+        // Tangani hasil autentikasi dari redirect Google Sign-In
+        getRedirectResult(auth).then((result) => {
+            if (result && result.user) {
+                console.log("Login redirect berhasil:", result.user.email);
+            }
+        }).catch((error) => {
+            console.error("Gagal getRedirectResult:", error);
+            const errEl = document.getElementById('auth-error');
+            if(errEl) {
+                errEl.innerText = "Gagal masuk: " + error.message;
+                errEl.classList.remove('hidden');
+            }
+        });
+
+        // --- 1. STATE & DATA MANAGEMENT ---
+        const DEFAULT_STATE = {
+            profile: { name: 'Admin IGR' },
+            catalog: [
+                { id: '1', name: '100 IGR', capital: 8000, price: 10000 },
+                { id: '2', name: '500 IGR', capital: 40000, price: 50000 }
+            ],
+            categories: {
+                income: ['Penjualan IGR', 'Lainnya'],
+                expense: ['Modal IGR', 'Operasional', 'Lainnya']
+            },
+            orders: [],
+            transactions: []
+        };
+
+        let appData = JSON.parse(JSON.stringify(DEFAULT_STATE));
+        let currentUser = null;
+        
+        // Referensi Dokumen & Koleksi Firebase
+        let userRef, configProfileRef, configCategoriesRef, ordersRef, transactionsRef, catalogRef;
+        // Listeners
+        let unsubOrders, unsubTrans, unsubCat, unsubProf, unsubCateg;
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+        function formatRp(angka) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+        }
+        function getToday() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        // --- 2. AUTHENTICATION LOGIC ---
+        
+        // Listen for standard auth state changes
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('auth-section').classList.add('hidden');
+                document.getElementById('app-section').classList.remove('hidden');
+                
+                // Update UI Profile
+                document.getElementById('header-profile-email').innerText = user.email || 'Mode Anonim';
+                if(user.photoURL) {
+                    document.getElementById('header-profile-img').src = user.photoURL;
+                }
+                
+                initFirestorePaths(user.uid);
+                await initializeDefaultData();
+                setupRealtimeListeners();
+                
+                // Mulai dari dashboard
+                window.navigate('dashboard');
+            } else {
+                currentUser = null;
+                document.getElementById('auth-section').classList.remove('hidden');
+                document.getElementById('app-section').classList.add('hidden');
+                
+                // Stop listeners
+                if(unsubOrders) unsubOrders();
+                if(unsubTrans) unsubTrans();
+                if(unsubCat) unsubCat();
+                if(unsubProf) unsubProf();
+                if(unsubCateg) unsubCateg();
+            }
+        });
+
+        // Initialize connection with System Token if available
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            signInWithCustomToken(auth, __initial_auth_token).catch(err => console.error("Custom token login failed:", err));
+        }
+
+        window.loginWithGoogle = () => {
+            const errEl = document.getElementById('auth-error');
+            errEl.classList.add('hidden');
+            
+            const btn = document.querySelector('button[onclick="loginWithGoogle()"]');
+            if(btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin text-igr-green"></i> Memproses Redirect Google...`;
+            }
+
+            signInWithRedirect(auth, provider).catch(error => {
+                errEl.innerText = "Gagal masuk: " + error.message;
+                errEl.classList.remove('hidden');
+                if(btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-6 h-6"> Lanjutkan dengan Google`;
+                }
+            });
+        };
+
+        window.logoutUser = () => {
+            window.showConfirm("Keluar Akun", "Apakah Anda yakin ingin keluar?", () => {
+                signOut(auth);
+            }, "Ya, Keluar");
+        };
+
+        // --- 3. FIRESTORE SYNC LOGIC ---
+
+        function initFirestorePaths(uid) {
+            userRef = doc(db, 'artifacts', appId, 'users', uid);
+            configProfileRef = doc(userRef, 'config', 'profile');
+            configCategoriesRef = doc(userRef, 'config', 'categories');
+            ordersRef = collection(userRef, 'orders');
+            transactionsRef = collection(userRef, 'transactions');
+            catalogRef = collection(userRef, 'catalog');
+        }
+
+        async function initializeDefaultData() {
+            if (!currentUser) return;
+            const profSnap = await getDoc(configProfileRef);
+            if (!profSnap.exists()) {
+                await setDoc(configProfileRef, { name: currentUser.displayName || DEFAULT_STATE.profile.name });
+            }
+            const catSnap = await getDoc(configCategoriesRef);
+            if (!catSnap.exists()) {
+                await setDoc(configCategoriesRef, DEFAULT_STATE.categories);
+                // Tambahkan katalog default pada setup awal
+                for(let c of DEFAULT_STATE.catalog) {
+                    await setDoc(doc(catalogRef, c.id), c);
+                }
+            }
+        }
+
+        function setupRealtimeListeners() {
+            if (!currentUser) return;
+
+            unsubProf = onSnapshot(configProfileRef, (snap) => {
+                if(snap.exists()) {
+                    appData.profile = snap.data();
+                    document.getElementById('header-profile-name').innerText = appData.profile.name;
+                    document.getElementById('set-profile-name').value = appData.profile.name;
+                }
+            }, err => console.error(err));
+
+            unsubCateg = onSnapshot(configCategoriesRef, (snap) => {
+                if(snap.exists()) {
+                    appData.categories = snap.data();
+                    window.renderSettings();
+                    window.updateCategoryOptions();
+                }
+            }, err => console.error(err));
+
+            unsubCat = onSnapshot(catalogRef, (snap) => {
+                appData.catalog = snap.docs.map(d => d.data());
+                window.renderSettings();
+            }, err => console.error(err));
+
+            unsubOrders = onSnapshot(ordersRef, (snap) => {
+                appData.orders = snap.docs.map(d => d.data());
+                appData.orders.sort((a,b) => new Date(b.date) - new Date(a.date)); // descending
+                window.renderOrders();
+                window.renderDashboard();
+            }, err => console.error(err));
+
+            unsubTrans = onSnapshot(transactionsRef, (snap) => {
+                appData.transactions = snap.docs.map(d => d.data());
+                appData.transactions.sort((a,b) => new Date(b.date) - new Date(a.date)); // descending
+                window.renderFinance();
+                window.renderDashboard();
+                window.renderReports();
+            }, err => console.error(err));
+        }
+
+
+        // --- 4. UI HELPERS & NAVIGATION (Assigned to Window) ---
+        let dashboardChartInstance = null;
+        let reportChartInstance = null;
+        let confirmCallback = null;
+
+        window.showToast = (message, type = 'success') => {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-600' : (type === 'error' ? 'bg-red-600' : 'bg-gray-800');
+            const icon = type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-circle-xmark' : 'fa-info-circle');
+            
+            toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i> <span class="text-sm font-medium">${message}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.remove('translate-x-full', 'opacity-0'); }, 10);
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => { toast.remove(); }, 300);
+            }, 3000);
+        };
+
+        window.showConfirm = (title, message, callback, btnText = "Ya, Lanjutkan") => {
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-msg').innerText = message;
+            document.getElementById('confirm-btn').innerText = btnText;
+            document.getElementById('modal-confirm').classList.remove('hidden');
+            confirmCallback = callback;
+        };
+
+        window.closeConfirm = (result) => {
+            document.getElementById('modal-confirm').classList.add('hidden');
+            if(result && confirmCallback) confirmCallback();
+            confirmCallback = null;
+        };
+
+        window.toggleSidebar = () => {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        };
+
+        window.navigate = (viewId, event) => {
+            if(event) event.preventDefault();
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active', 'text-white'));
+            
+            document.getElementById(`view-${viewId}`).classList.add('active');
+            
+            const navItem = document.getElementById(`nav-${viewId}`);
+            if(navItem) navItem.classList.add('active', 'text-white');
+
+            const titles = {
+                'dashboard': 'Dashboard', 'orders': 'Manajemen Orderan', 
+                'finance': 'Buku Keuangan', 'reports': 'Laporan Keuangan', 'settings': 'Pengaturan Sistem'
+            };
+            document.getElementById('page-title').innerText = titles[viewId];
+
+            if(window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+                document.getElementById('mobile-overlay').classList.add('hidden');
+            }
+
+            if(viewId === 'dashboard') window.renderDashboard();
+            if(viewId === 'orders') window.renderOrders();
+            if(viewId === 'finance') window.renderFinance();
+            if(viewId === 'reports') window.renderReports();
+            if(viewId === 'settings') window.renderSettings();
+        };
+
+
+        // --- 5. DASHBOARD & CHARTS ---
+        
+        window.renderDashboard = () => {
+            let totalIncome = 0; let totalExpense = 0;
+            appData.transactions.forEach(t => {
+                if(t.type === 'income') totalIncome += Number(t.amount);
+                if(t.type === 'expense') totalExpense += Number(t.amount);
+            });
+            const balance = totalIncome - totalExpense;
+
+            document.getElementById('dash-saldo').innerText = formatRp(balance);
+            document.getElementById('dash-income').innerText = formatRp(totalIncome);
+            document.getElementById('dash-expense').innerText = formatRp(totalExpense);
+            document.getElementById('dash-profit').innerText = formatRp(balance); 
+            if(balance < 0) document.getElementById('dash-profit').classList.replace('text-gray-800', 'text-red-500');
+            else document.getElementById('dash-profit').classList.replace('text-red-500', 'text-gray-800');
+
+            let activeOrders = 0, doneOrders = 0, canceledOrders = 0;
+            appData.orders.forEach(o => {
+                if(o.status === 'MENUNGGU' || o.status === 'PROSES') activeOrders++;
+                if(o.status === 'SELESAI') doneOrders++;
+                if(o.status === 'DIBATALKAN') canceledOrders++;
+            });
+            document.getElementById('dash-order-active').innerText = activeOrders;
+            document.getElementById('dash-order-done').innerText = doneOrders;
+            document.getElementById('dash-order-cancelled').innerText = canceledOrders;
+
+            const activities = [];
+            appData.orders.forEach(o => activities.push({ date: o.date, text: `Order ${o.buyer} - ${o.status}`, type: 'order', id: o.id }));
+            appData.transactions.forEach(t => activities.push({ date: t.date, text: `${t.type === 'income'? 'Pemasukan':'Pengeluaran'}: ${t.category} - ${formatRp(t.amount)}`, type: t.type, id: t.id }));
+            
+            activities.sort((a, b) => new Date(b.date) - new Date(a.date));
+            const recentHTML = activities.slice(0, 5).map(act => {
+                let icon = 'fa-circle-dot text-gray-400';
+                if(act.type === 'income') icon = 'fa-arrow-trend-up text-green-500';
+                if(act.type === 'expense') icon = 'fa-arrow-trend-down text-red-500';
+                if(act.type === 'order') icon = 'fa-cart-shopping text-blue-500';
+                return `<li class="flex items-center gap-3 text-sm"><i class="fa-solid ${icon}"></i> 
+                        <span class="flex-1 truncate">${act.text}</span>
+                        <span class="text-xs text-gray-400">${act.date.split('T')[0]}</span></li>`;
+            }).join('');
+            document.getElementById('dash-recent-activities').innerHTML = recentHTML || '<li class="text-gray-500 text-sm italic">Belum ada aktivitas.</li>';
+
+            renderDashboardChart();
+        };
+
+        function renderDashboardChart() {
+            const ctx = document.getElementById('dashboardChart').getContext('2d');
+            const labels = []; const dataIncome = []; const dataExpense = [];
+            
+            for(let i=6; i>=0; i--) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().split('T')[0];
+                labels.push(dateStr.substring(5)); 
+                let inc = 0, exp = 0;
+                appData.transactions.forEach(t => {
+                    if(t.date.startsWith(dateStr)) {
+                        if(t.type === 'income') inc += Number(t.amount);
+                        if(t.type === 'expense') exp += Number(t.amount);
+                    }
+                });
+                dataIncome.push(inc); dataExpense.push(exp);
+            }
+
+            if(dashboardChartInstance) dashboardChartInstance.destroy();
+            dashboardChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Pemasukan', data: dataIncome, borderColor: '#16a34a', backgroundColor: 'rgba(22, 163, 74, 0.1)', fill: true, tension: 0.3 },
+                        { label: 'Pengeluaran', data: dataExpense, borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', fill: true, tension: 0.3 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { y: { beginAtZero: true, ticks: { callback: function(val) { return 'Rp' + val / 1000 + 'k'; } } } }
+                }
+            });
+        }
+
+        // --- 6. ORDERS MANAGEMENT ---
+        
+        window.calcProfit = () => {
+            const price = Number(document.getElementById('ord-price').value) || 0;
+            const capital = Number(document.getElementById('ord-capital').value) || 0;
+            document.getElementById('ord-profit').value = formatRp(price - capital);
+        };
+
+        window.autoFillOrder = () => {
+            const catId = document.getElementById('ord-katalog').value;
+            if(catId) {
+                const item = appData.catalog.find(i => i.id === catId);
+                if(item) {
+                    document.getElementById('ord-price').value = item.price;
+                    document.getElementById('ord-capital').value = item.capital;
+                    window.calcProfit();
+                }
+            }
+        };
+
+        window.openOrderModal = (id = null) => {
+            const modal = document.getElementById('modal-order');
+            const content = document.getElementById('modal-order-content');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+
+            const sel = document.getElementById('ord-katalog');
+            sel.innerHTML = '<option value="">-- Pilih dari Katalog atau Isi Manual --</option>' + 
+                            appData.catalog.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+            const warningMsg = document.getElementById('ord-status-warning');
+
+            if(id) {
+                document.getElementById('modal-order-title').innerText = 'Edit Orderan';
+                const order = appData.orders.find(o => o.id === id);
+                document.getElementById('ord-id').value = order.id;
+                document.getElementById('ord-buyer').value = order.buyer;
+                document.getElementById('ord-price').value = order.price;
+                document.getElementById('ord-capital').value = order.capital;
+                document.getElementById('ord-status').value = order.status;
+                sel.value = ""; 
+                window.calcProfit();
+                warningMsg.classList.remove('hidden');
+            } else {
+                document.getElementById('modal-order-title').innerText = 'Tambah Orderan';
+                document.getElementById('form-order').reset();
+                document.getElementById('ord-id').value = '';
+                document.getElementById('ord-status').value = 'MENUNGGU';
+                window.calcProfit();
+                warningMsg.classList.add('hidden');
+            }
+            
+            document.getElementById('ord-status').onchange = function(){
+                if(this.value === 'SELESAI') warningMsg.classList.remove('hidden');
+                else warningMsg.classList.add('hidden');
+            };
+        };
+
+        window.closeOrderModal = () => {
+            const modal = document.getElementById('modal-order');
+            const content = document.getElementById('modal-order-content');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        };
+
+        window.saveOrder = async (e) => {
+            e.preventDefault();
+            if(!currentUser) return;
+
+            const id = document.getElementById('ord-id').value;
+            const buyer = document.getElementById('ord-buyer').value;
+            const price = Number(document.getElementById('ord-price').value);
+            const capital = Number(document.getElementById('ord-capital').value);
+            const status = document.getElementById('ord-status').value;
+            
+            let itemName = "Custom Order";
+            const selCat = document.getElementById('ord-katalog');
+            if(selCat.selectedIndex > 0) itemName = selCat.options[selCat.selectedIndex].text;
+
+            const profit = price - capital;
+            
+            try {
+                if(id) {
+                    const oldOrder = appData.orders.find(o => o.id === id);
+                    const oldStatus = oldOrder.status;
+                    const orderData = { id, buyer, item: itemName, price, capital, profit, status, date: oldOrder.date };
+                    
+                    await setDoc(doc(ordersRef, id), orderData);
+
+                    if(oldStatus === 'SELESAI' && status !== 'SELESAI') {
+                        const related = appData.transactions.filter(t => t.refId === id);
+                        for(let t of related) await deleteDoc(doc(transactionsRef, t.id));
+                        window.showToast('Status batal Selesai, dana dikembalikan dari catatan.', 'info');
+                    } else if(oldStatus !== 'SELESAI' && status === 'SELESAI') {
+                        await recordOrderToFinance(id, orderData);
+                        window.showToast('Order Selesai! Otomatis dicatat ke buku keuangan.');
+                    } else if(oldStatus === 'SELESAI' && status === 'SELESAI') {
+                        const related = appData.transactions.filter(t => t.refId === id);
+                        for(let t of related) await deleteDoc(doc(transactionsRef, t.id));
+                        await recordOrderToFinance(id, orderData);
+                    } else {
+                        window.showToast('Order berhasil diperbarui');
+                    }
+                } else {
+                    const newId = generateId();
+                    const orderData = { id: newId, buyer, item: itemName, price, capital, profit, status, date: new Date().toISOString() };
+                    await setDoc(doc(ordersRef, newId), orderData);
+                    
+                    if(status === 'SELESAI') {
+                        await recordOrderToFinance(newId, orderData);
+                        window.showToast('Order Selesai! Otomatis dicatat ke keuangan.');
+                    } else {
+                        window.showToast('Order berhasil ditambahkan');
+                    }
+                }
+                window.closeOrderModal();
+            } catch (err) {
+                console.error(err);
+                window.showToast('Gagal menyimpan order', 'error');
+            }
+        };
+
+        async function recordOrderToFinance(orderId, orderData) {
+            if(!currentUser) return;
+            const incId = generateId();
+            await setDoc(doc(transactionsRef, incId), {
+                id: incId, refId: orderId, type: 'income', category: 'Penjualan IGR',
+                amount: orderData.price, date: getToday(), note: `Omzet Order: ${orderData.buyer}`
+            });
+            const expId = generateId();
+            await setDoc(doc(transactionsRef, expId), {
+                id: expId, refId: orderId, type: 'expense', category: 'Modal IGR',
+                amount: orderData.capital, date: getToday(), note: `Modal Order: ${orderData.buyer}`
+            });
+        }
+
+        window.deleteOrder = (id) => {
+            window.showConfirm("Hapus Order", "Yakin ingin menghapus order ini? Catatan keuangannya juga akan dihapus.", async () => {
+                if(!currentUser) return;
+                try {
+                    await deleteDoc(doc(ordersRef, id));
+                    const related = appData.transactions.filter(t => t.refId === id);
+                    for(let t of related) await deleteDoc(doc(transactionsRef, t.id));
+                    window.showToast('Order berhasil dihapus', 'info');
+                } catch(e) {
+                    window.showToast('Gagal menghapus order', 'error');
+                }
+            });
+        };
+
+        window.renderOrders = () => {
+            const search = document.getElementById('order-search').value.toLowerCase();
+            const filterStat = document.getElementById('order-filter-status').value;
+            const tbody = document.getElementById('orders-table-body');
+            
+            let filtered = appData.orders.filter(o => o.buyer.toLowerCase().includes(search));
+            if(filterStat !== 'ALL') filtered = filtered.filter(o => o.status === filterStat);
+
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-500 italic">Tidak ada data orderan.</td></tr>`;
+                return;
+            }
+
+            const statusColors = {
+                'MENUNGGU': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+                'PROSES': 'bg-blue-100 text-blue-700 border-blue-200',
+                'SELESAI': 'bg-green-100 text-green-700 border-green-200',
+                'DIBATALKAN': 'bg-red-100 text-red-700 border-red-200'
+            };
+
+            tbody.innerHTML = filtered.map(o => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="p-3 border-t border-gray-100 whitespace-nowrap">${o.date.split('T')[0]}</td>
+                    <td class="p-3 border-t border-gray-100 font-medium text-gray-800">${o.buyer}</td>
+                    <td class="p-3 border-t border-gray-100 text-gray-500 text-xs">${o.item || 'Custom'}</td>
+                    <td class="p-3 border-t border-gray-100 text-right text-gray-800">${formatRp(o.price)}</td>
+                    <td class="p-3 border-t border-gray-100 text-right text-green-600 font-semibold">${formatRp(o.profit)}</td>
+                    <td class="p-3 border-t border-gray-100 text-center">
+                        <span class="px-2 py-1 text-[10px] font-bold rounded-full border ${statusColors[o.status]} uppercase tracking-wider">${o.status}</span>
+                    </td>
+                    <td class="p-3 border-t border-gray-100 text-center space-x-2 whitespace-nowrap">
+                        <button onclick="openOrderModal('${o.id}')" class="text-blue-500 hover:text-blue-700 p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deleteOrder('${o.id}')" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        };
+
+
+        // --- 7. FINANCE & TRANSACTIONS ---
+        
+        window.updateCategoryOptions = () => {
+            const type = document.querySelector('input[name="finType"]:checked').value;
+            const sel = document.getElementById('fin-category');
+            if(appData.categories && appData.categories[type]) {
+                sel.innerHTML = appData.categories[type].map(c => `<option value="${c}">${c}</option>`).join('');
+            }
+        };
+
+        window.handleFinanceSubmit = async (e) => {
+            e.preventDefault();
+            if(!currentUser) return;
+            const type = document.querySelector('input[name="finType"]:checked').value;
+            const category = document.getElementById('fin-category').value;
+            const amount = Number(document.getElementById('fin-amount').value);
+            const date = document.getElementById('fin-date').value || getToday();
+            const note = document.getElementById('fin-note').value;
+
+            const tId = generateId();
+            try {
+                await setDoc(doc(transactionsRef, tId), {
+                    id: tId, refId: null, type, category, amount, date: date + 'T12:00:00.000Z', note
+                });
+                window.showToast('Transaksi berhasil dicatat');
+                document.getElementById('finance-form').reset();
+                document.getElementById('fin-date').value = getToday();
+                window.updateCategoryOptions();
+            } catch(err) {
+                window.showToast('Gagal menyimpan transaksi', 'error');
+            }
+        };
+
+        window.deleteTransaction = (id, refId) => {
+            if(refId) {
+                window.showToast('Transaksi otomatis dari Orderan dihapus via menu Orderan.', 'error');
+                return;
+            }
+            window.showConfirm("Hapus Transaksi", "Yakin menghapus transaksi manual ini?", async () => {
+                if(!currentUser) return;
+                try {
+                    await deleteDoc(doc(transactionsRef, id));
+                    window.showToast('Transaksi dihapus', 'info');
+                } catch(e) { window.showToast('Gagal menghapus', 'error'); }
+            });
+        };
+
+        window.renderFinance = () => {
+            if(!document.getElementById('fin-date').value) document.getElementById('fin-date').value = getToday();
+            window.updateCategoryOptions();
+            const tbody = document.getElementById('finance-table-body');
+            
+            if(appData.transactions.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-gray-500 italic">Belum ada transaksi.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = appData.transactions.map(t => `
+                <tr class="hover:bg-gray-50">
+                    <td class="p-3 border-t border-gray-100 whitespace-nowrap">${t.date.split('T')[0]}</td>
+                    <td class="p-3 border-t border-gray-100">
+                        <div class="font-medium text-gray-800">${t.category}</div>
+                        <div class="text-xs text-gray-500">${t.note} ${t.refId ? '<span class="text-blue-400 bg-blue-50 px-1 rounded">(Auto)</span>' : ''}</div>
+                    </td>
+                    <td class="p-3 border-t border-gray-100 text-right text-green-600 font-semibold">
+                        ${t.type === 'income' ? '+ ' + formatRp(t.amount) : '-'}
+                    </td>
+                    <td class="p-3 border-t border-gray-100 text-right text-red-500 font-semibold">
+                        ${t.type === 'expense' ? '- ' + formatRp(t.amount) : '-'}
+                    </td>
+                    <td class="p-3 border-t border-gray-100 text-center">
+                        <button onclick="deleteTransaction('${t.id}', ${t.refId ? `'${t.refId}'` : 'null'})" class="${t.refId ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-700'} p-1"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        };
+
+
+        // --- 8. REPORTS ---
+        
+        window.generateReport = () => {
+            const start = document.getElementById('report-start').value;
+            const end = document.getElementById('report-end').value;
+            let filteredTrans = appData.transactions;
+            let periodText = 'Semua Waktu';
+            
+            if(start && end) {
+                filteredTrans = appData.transactions.filter(t => {
+                    const tDate = t.date.split('T')[0];
+                    return tDate >= start && tDate <= end;
+                });
+                periodText = `${start} s/d ${end}`;
+            }
+            document.getElementById('report-period-text').innerText = `Periode: ${periodText}`;
+
+            let tIncome = 0, tExpense = 0; const dailyData = {};
+            filteredTrans.forEach(t => {
+                const d = t.date.split('T')[0];
+                if(!dailyData[d]) dailyData[d] = { inc: 0, exp: 0 };
+                if(t.type === 'income') { tIncome += Number(t.amount); dailyData[d].inc += Number(t.amount); }
+                else { tExpense += Number(t.amount); dailyData[d].exp += Number(t.amount); }
+            });
+
+            document.getElementById('rep-income').innerText = formatRp(tIncome);
+            document.getElementById('rep-expense').innerText = formatRp(tExpense);
+            document.getElementById('rep-profit').innerText = formatRp(tIncome - tExpense);
+
+            const labels = Object.keys(dailyData).sort();
+            const dInc = labels.map(l => dailyData[l].inc);
+            const dExp = labels.map(l => dailyData[l].exp);
+
+            const ctx = document.getElementById('reportChart').getContext('2d');
+            if(reportChartInstance) reportChartInstance.destroy();
+            reportChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels.length ? labels : ['Tidak ada data'],
+                    datasets: [
+                        { label: 'Pemasukan', data: labels.length ? dInc : [0], backgroundColor: '#16a34a' },
+                        { label: 'Pengeluaran', data: labels.length ? dExp : [0], backgroundColor: '#ef4444' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+        };
+
+        window.renderReports = () => {
+            const now = new Date();
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+            if(!document.getElementById('report-start').value){
+                document.getElementById('report-start').value = firstDay;
+                document.getElementById('report-end').value = lastDay;
+            }
+            window.generateReport();
+        };
+
+        window.exportToPDF = () => {
+            const element = document.getElementById('report-content');
+            const opt = {
+                margin: 1, filename: `Laporan_IGR_${getToday()}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save().then(()=>{
+                window.showToast('PDF berhasil diunduh');
+            });
+        };
+
+
+        // --- 9. SETTINGS & CONFIG ---
+        
+        window.renderSettings = () => {
+            if(appData.profile) {
+                document.getElementById('set-profile-name').value = appData.profile.name;
+                document.getElementById('header-profile-name').innerText = appData.profile.name;
+            }
+            const ulCat = document.getElementById('list-katalog-igr');
+            ulCat.innerHTML = appData.catalog.map(c => `
+                <li class="flex justify-between items-center text-sm p-2 bg-gray-50 border border-gray-100 rounded">
+                    <div><span class="font-bold">${c.name}</span> <br> <span class="text-xs text-gray-500">M: ${formatRp(c.capital)} | J: ${formatRp(c.price)}</span></div>
+                    <button onclick="delCatalog('${c.id}')" class="text-red-500"><i class="fa-solid fa-trash text-xs"></i></button>
+                </li>
+            `).join('');
+
+            if(appData.categories) {
+                document.getElementById('list-cat-inc').innerHTML = appData.categories.income.map(c => `
+                    <li class="flex justify-between p-1 border-b text-xs"><span>${c}</span> <button onclick="delCatItem('income', '${c}')" class="text-red-500">x</button></li>
+                `).join('');
+                document.getElementById('list-cat-exp').innerHTML = appData.categories.expense.map(c => `
+                    <li class="flex justify-between p-1 border-b text-xs"><span>${c}</span> <button onclick="delCatItem('expense', '${c}')" class="text-red-500">x</button></li>
+                `).join('');
+            }
+        };
+
+        window.saveProfile = async () => {
+            if(!currentUser) return;
+            const name = document.getElementById('set-profile-name').value;
+            await setDoc(configProfileRef, { name }, { merge: true });
+            window.showToast('Profil diperbarui ke Cloud');
+        };
+
+        window.addIgrCatalog = async (e) => {
+            e.preventDefault();
+            if(!currentUser) return;
+            const id = generateId();
+            const name = document.getElementById('cat-nama').value;
+            const capital = Number(document.getElementById('cat-modal').value);
+            const price = Number(document.getElementById('cat-jual').value);
+            
+            await setDoc(doc(catalogRef, id), { id, name, capital, price });
+            e.target.reset();
+            window.showToast('Item katalog tersimpan');
+        };
+
+        window.delCatalog = async (id) => {
+            if(!currentUser) return;
+            await deleteDoc(doc(catalogRef, id));
+        };
+
+        window.addCategory = async (e, type) => {
+            e.preventDefault();
+            if(!currentUser) return;
+            const input = type === 'income' ? document.getElementById('cat-inc-name') : document.getElementById('cat-exp-name');
+            const val = input.value.trim();
+            if(val && !appData.categories[type].includes(val)) {
+                const newCat = { ...appData.categories };
+                newCat[type].push(val);
+                await setDoc(configCategoriesRef, newCat);
+                input.value = '';
+            }
+        };
+
+        window.delCatItem = async (type, val) => {
+            if(!currentUser) return;
+            if(val === 'Penjualan IGR' || val === 'Modal IGR') {
+                window.showToast('Kategori sistem tidak bisa dihapus', 'error'); return;
+            }
+            const newCat = { ...appData.categories };
+            newCat[type] = newCat[type].filter(c => c !== val);
+            await setDoc(configCategoriesRef, newCat);
+        };
+
+        window.exportData = () => {
+            const dataStr = JSON.stringify(appData, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `Backup_IGR_Cloud_${getToday()}.json`;
+            a.click(); URL.revokeObjectURL(url);
+            window.showToast('Data berhasil diekspor');
+        };
+
+
+        // --- PWA MANIFEST HACK ---
+        const manifest = {
+            "name": "IGR Manager PWA", "short_name": "IGR", "start_url": ".", "display": "standalone",
+            "background_color": "#ffffff", "theme_color": "#16a34a",
+            "icons": [{
+                "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%2316a34a'/><text x='50%' y='50%' font-family='sans-serif' font-size='200' fill='white' dominant-baseline='middle' text-anchor='middle'>IGR</text></svg>",
+                "sizes": "192x192 512x512", "type": "image/svg+xml"
+            }]
+        };
+        document.getElementById('manifest-link').setAttribute('href', URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type: 'application/json'})));
+
+    </script>
+</body>
+</html>
